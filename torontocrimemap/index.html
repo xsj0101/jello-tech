@@ -1,0 +1,932 @@
+<html>
+<meta charset="utf-8">
+
+<head>
+    <title>Toronto Crime Map</title>
+
+    <!-- Import D3 -->
+    <script src="https://d3js.org/d3.v4.min.js"></script>
+    <script src="https://d3js.org/d3-color.v1.min.js"></script>
+    <script src="https://d3js.org/d3-interpolate.v1.min.js"></script>
+    <script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+
+    <!-- Import Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.4/dist/leaflet.css"
+   integrity="sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA=="
+   crossorigin=""/>
+   <!-- Make sure you put this AFTER Leaflet's CSS -->
+    <script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js"
+   integrity="sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA=="
+   crossorigin=""></script>
+
+   <!-- Import MarkerCluster -->
+   <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.css" />
+   <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.Default.css" />
+   <script type='text/javascript' src='https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/leaflet.markercluster.js'></script>
+
+    <!-- Import subgroup for clustering -->
+   <script src="https://unpkg.com/leaflet.featuregroup.subgroup@1.0.2/dist/leaflet.featuregroup.subgroup.js"></script>
+
+   <!-- Import styledLayerControl -->
+   <link rel="stylesheet" href="css/styledLayerControl.css" />
+   <script src="src/styledLayerControl.js"></script>
+
+    <!-- Import jquery -->
+   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+
+   <!-- Load Data -->
+  <script src="dataset/Neighbourhood/Neighbourhood_Crime_Rates_Boundary_File_.js"></script>
+  <script src="dataset/MCI/MCI_2017.js"></script>
+  <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/pure-min.css" integrity="sha384-nn4HPE8lTHyVtfCBi5yW9d20FjT8BJwUXyWZT9InLYax14RDjBj46LmSztkmNP9w" crossorigin="anonymous">
+      
+    <!--[if lte IE 8]>
+        <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/grids-responsive-old-ie-min.css">
+    <![endif]-->
+    <!--[if gt IE 8]><!-->
+        <link rel="stylesheet" href="https://unpkg.com/purecss@1.0.0/build/grids-responsive-min.css">
+    <!--<![endif]-->
+    
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css">
+    
+        <!--[if lte IE 8]>
+            <link rel="stylesheet" href="css/layouts/marketing-old-ie.css">
+        <![endif]-->
+        <!--[if gt IE 8]><!-->
+            <link rel="stylesheet" href="css/layouts/marketing.css">
+        <!--<![endif]-->
+
+    <style>
+        #map { 
+            float:right;
+            height: 60%; 
+            width: 80%;
+            top:62px;
+            left:0px;
+            background: #262626;
+        }
+
+        #ranking {
+            float:left;
+            height: 60%;
+            width: 20%;
+            position: absolute;
+            left: 10px;
+            top: 60px;
+            overflow: scroll;
+        }
+
+        #timeline {
+            float:left;
+            height: 40%;
+        }
+
+		.mycluster {
+			width: 40px;
+			height: 40px;
+			background-color: greenyellow;
+			text-align: center;
+			font-size: 24px;
+		}
+
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: #66FCF1;
+            shape-rendering: crispEdges;
+        }
+
+        .tooltip {
+            text-anchor: middle;
+            font-family: sans-serif;
+            font-size: 10px;
+            font-weight: bold;
+            fill: white;
+        }
+
+        .brushed {
+                fill:#66FCF1;
+                opacity: 1.0;
+            }
+
+        .non_brushed {
+                fill: #45A29E;
+                opacity: 1;
+        }
+
+        .brushedText {
+            color:white;
+            font-size: 130%;
+            font-family:'Arial';
+        }
+        
+        .selection{
+            opacity: 0;
+        }
+        /* Style the header */
+        /* .header {
+            padding: 20px;
+            text-align: center;
+        } */
+
+        .home-menu {
+            background: #1F2833;
+        }
+
+        .footer {
+            background:#0B0C10;
+            
+        }
+
+        body {
+            color:black;
+        }
+
+        footer {
+            color:yellow;
+            z-index: 30;
+        }
+
+        /* Create three equal columns that floats next to each other */
+        /* .content1 {
+            float: left;
+            width: 500px;
+            padding: 15px;
+        } */
+
+        /* .content2 {
+            float: left;
+            width: 50px;
+            padding: 15px;
+        } */
+
+        /* Clear floats after the columns */
+        /* .main_content:after {
+            content: "";
+            display: table;
+            clear: both;
+        } */
+	</style>
+</head>
+
+<body bgcolor="#262626">
+        <div class="header">
+            <div class="home-menu pure-menu pure-menu-horizontal pure-menu-fixed">
+                <a class="pure-menu-heading" href="">Toronto Crime Map</a>
+        
+                <ul class="pure-menu-list">
+                    <li class="pure-menu-item"><a href="http://data.torontopolice.on.ca/datasets/mci-2014-to-2017" class="pure-menu-link">Data Source</a></li>
+                </ul>
+            </div>
+        </div>
+    
+        <div class="main_content">
+            <div class="content1">
+                <div id="map"> </div>
+                </div>
+            <div class="content4">
+                    <div id="ranking"></div>
+                </div>
+            <div class="content3">
+                    <div id="timeline"></div>
+                </div>
+            <div class="footer l-box is-center" style = "color:#6FBEF3">
+                Developed by Jesse Xu & Kehang Zhang for Information Visualization@NYU Shanghai
+            </div>
+        </div>
+    
+    <script>
+        console.log("raw data", MCI_2017);
+// global variables
+        // initiate category variables to contain all possible values
+        var global ={
+            "MCI": ["Assault", "Break and Enter",  "Robbery", "Theft Over", "Auto Theft"],
+            "premisetype": [ "Apartment","Commercial","House", "Outside", "Other"],
+            "occurrencedate": [new Date("2017-12-01T04:00:00.000Z"), new Date("2017-12-31T04:00:00.000Z")],
+            // "Division": ["D54", "D52", "D12", "D31", "D55", "D22", "D51", "D43", "D11", "D14", "D42", "D41", "D53", "D33", "D32", "D13", "D23"],
+            // "offence": ["B&E", "Assault With Weapon", "Assault", "Assault Peace Officer", "Assault Bodily Harm", "Robbery With Weapon", "Robbery - Swarming", "Robbery - Mugging", "Aggravated Assault", "Discharge Firearm With Intent", "Robbery - Financial Institute", "Assault - Resist/ Prevent Seiz", "Robbery - Business", "Robbery - Other", "Pointing A Firearm", "Robbery - Purse Snatch", "Theft Over", "B&E W'Intent", "Discharge Firearm - Recklessly", "Robbery - Home Invasion", "Unlawfully In Dwelling-House", "Theft Over - Shoplifting", "Use Firearm / Immit Commit Off", "Robbery - Taxi", "Theft From Motor Vehicle Over", "Assault Peace Officer Wpn/Cbh", "Theft Over - Bicycle", "Crim Negligence Bodily Harm", "Robbery - Atm", "Theft From Mail / Bag / Key", "Robbery - Delivery Person", "Air Gun Or Pistol: Bodily Harm", "Robbery - Vehicle Jacking", "B&E Out", "Assault - Force/Thrt/Impede", "Administering Noxious Thing", "B&E - To Steal Firearm", "Theft Of Utilities Over", "Disarming Peace/Public Officer", "Aggravated Aslt Peace Officer", "Theft Over - Distraction", "Aggravated Assault Avails Pros", "Robbery - Armoured Car", "Unlawfully Causing Bodily Harm", "Set/Place Trap/Intend Death/Bh", "Theft Of Motor Vehicle", "Theft - Misapprop Funds Over"],
+            // // var Neighbourhood = listPossibleValues(MCI_2017,"Neighbourhood");
+            // "reporteddate": [new Date("2016-12-25T04:00:00.000Z"), new Date("2018-01-05T04:00:00.000Z")],
+            // "occurrencehour": ["1", "4", "3", "8", "18", "19", "2", "21", "15", "9", "0", "5", "14", "6", "7", "16", "23", "11", "12", "22", "10", "20", "17", "13"],
+            // "reportedhour": ["1", "4", "3", "8", "18", "19", "2", "21", "15", "9", "0", "5", "14", "6", "7", "16", "23", "11", "12", "22", "10", "20", "17", "13"]
+        };
+        
+        var initialOccurrenceDate = [new Date("2016-12-25T04:00:00.000Z"), new Date("2018-01-05T04:00:00.000Z")];
+        var crimeTypeColor = {"Assault": "#FFCC00", "Break and Enter":"#FF9900", "Robbery":"#FF6600", "Auto Theft":"#FF3300", "Theft Over":"FF0000"};
+        var crimeTypeIcon = {"Assault": "Assault.svg", "Break and Enter":"Break_and_Enter.svg", "Robbery":"Robbery.svg", "Auto Theft":"Auto_Theft.svg", "Theft Over":"Theft_Over.svg"};
+
+        var MCIList = ["Assault", "Break and Enter",  "Robbery", "Theft Over", "Auto Theft"];
+        var premisetypeList = [ "Apartment","Commercial","House", "Outside", "Other"];
+
+// global functions
+        // extract a list of all possible values for a given property name
+        function listPossibleValues(geoJson, property_name){
+            var all_possible_values=[];
+            var nested = d3.nest()
+                .key(function(d) { return d.properties[property_name]; })
+                .rollup(function(v){
+                    all_possible_values.push(v[0].properties[property_name]);
+                })
+                .entries(geoJson.features);
+            return all_possible_values;
+        };
+
+        // function to filter data
+        function filterCategory (geoJson){
+            console.log("filterCategory")
+            var geoJsonCopy = JSON.parse(JSON.stringify(geoJson));
+            // var geoJsonCopy = {"type": "FeatureCollection", "features": []}
+            geoJsonCopy.features = geoJsonCopy.features.filter(function(d){
+                p = d.properties;
+                return (global.MCI.includes(p.MCI) && global.premisetype.includes(p.premisetype));
+            });
+            return geoJsonCopy;
+        };
+
+        function filterTime (geoJson, timerange){
+            console.log("filterTime")
+            var geoJsonCopy = JSON.parse(JSON.stringify(geoJson));
+            // var geoJsonCopy = {"type": "FeatureCollection", "features": []}
+            geoJsonCopy.features = geoJsonCopy.features.filter(function(d){
+                p = d.properties;
+                timerange[0].setUTCHours(0,0,0,0);
+                timerange[1].setUTCHours(0,0,0,0);
+                return (new Date(p.occurrencedate).setUTCHours(0,0,0,0) >= timerange[0] && new Date(p.occurrencedate).setUTCHours(0,0,0,0) <=timerange[1]);
+            });
+            return geoJsonCopy;
+        };
+
+        // function to nest data for timeline view
+        function nestByDate(geoJSON){
+            // nest by date
+            var nestedData = d3.nest()
+                .key(function(d){ return d.properties.occurrencedate})
+                .entries(geoJSON.features);
+            // sort by date
+            nestedData.sort(function (a,b){
+                return (new Date(a.key)-new Date(b.key));
+            });
+            return nestedData;
+        };
+
+        function nestByNeighborhood(geoJSON){
+            var nestedData = d3.nest()
+                .key(function(d){ return d.properties.Neighbourhood })
+                .rollup(function(v){
+                    return v.length;
+                })
+                .entries(geoJSON.features);
+            nestedData.sort(function (a,b){
+                return (a.value-b.value);
+            });
+            return nestedData;
+        };
+
+        function turnListToDict(listinput){
+            var dictoutput={}
+            listinput.forEach(function(d){
+                dictoutput[d.key]=d.value;
+            });
+            return dictoutput;
+        };
+
+
+    
+
+// View Initializers
+        // View 1: Map
+        function MapInitializer(){
+            console.log("MapInitializer runs")
+            /*---Initialize Maps---*/
+            var mymap = L.map('map',{
+                    preferCanvas: true,
+                    maxZoom: 20,
+                    attributionControl: false
+                }).setView([43.6598604,-79.3881029], 12);
+
+
+            var basemap = L.tileLayer(
+                "https://cartodb-basemaps-{s}.global.ssl.fastly.net/light_all/{z}/{x}/{y}.png"
+                // 'https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}'
+                , {
+                attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+                maxZoom: 18,
+                id: 'mapbox.streets',
+                // accessToken: 'sk.eyJ1IjoieHNqMDEwMSIsImEiOiJjam96M29qamUyaHdvM3Nucm4zcjdicGxrIn0.PbeuYaBHWf3N1yhG0fKqnA'
+            });
+
+            var CartoDB_DarkMatter = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',
+                subdomains: 'abcd',
+                maxZoom: 19
+            }).addTo(mymap);
+
+            test =nestByNeighborhood(MCI_2017)
+            dict={}
+            test.forEach(function(d){
+                dict[d.key]=d.value;
+            });
+            console.log("neighbourhood runs")
+
+            var colorScale = d3.scaleSequential(d3.interpolateBlues).domain([0, 1500]);
+            function getColor(d) {
+                return colorScale(d);
+            }
+            
+            /*---Initialize Neighbourhood---*/
+            var boundary = L.geoJson(neighbourhood, {
+                style: function (feature) {
+                    return {
+                        fillColor: getColor(feature.properties.Total_2017),
+                        weight: 2,
+                        color: "grey",
+                        opacity: 0.5,
+                        opacity: 0.5
+                    };
+                },
+
+                onEachFeature: function (feature, layer) {
+                    if (feature.properties) {
+                    // console.log(feature.properties);
+                    //Assault_2017 AutoTheft_2017 BreakandEnter_2017 Robbery_2017 TheftOver_2017 Total_2017
+                    layer.on({
+                        click: 
+                            function (e) {
+                            layer.bindPopup(
+                                '<h2>'+String(feature.properties.Neighbourhood)+'</h2>'
+                                +'<br>Population: '+String(feature.properties.Population)
+                                +'<br>Total crime in 2017: '+String(feature.properties.Total_2017)
+                                +"<br><img src='Assault.svg' width='20' height='20'>&nbsp;Assault in 2017: "+String(feature.properties.Assault_2017)
+                                +"<br><img src='Break_and_Enter.svg' width='20' height='20'>&nbsp;Break and Enter in 2017: "+String(feature.properties.BreakandEnter_2017)
+                                +"<br><img src='Robbery.svg' width='20' height='20'>&nbsp;Robbery in 2017: "+String(feature.properties.Robbery_2017)
+                                +"<br><img src='Auto_Theft.svg' width='20' height='20'>&nbsp;Auto Theft in 2017: "+String(feature.properties.AutoTheft_2017)
+                                +"<br><img src='Theft_Over.svg' width='20' height='20'>&nbsp;Theft Over in 2017: "+String(feature.properties.TheftOver_2017));
+                        }
+                    });
+                    }
+                    layer.on({
+                        mouseover: function (e) {
+                            var layer = e.target;
+                            layer.setStyle({
+                            weight: 3,
+                            color: "#00FFFF",
+                            opacity: 0.8
+                            });
+                        },
+                        mouseout: function (e) {
+                            var layer = e.target;
+                            layer.setStyle({
+                            weight: 2,
+                            color: "grey",
+                            opacity: 0.5
+                            });
+                        }
+                    });
+                }
+            }).addTo(mymap);
+
+
+            /*---Initialize Clusters of markers---*/
+            var clusterOptions = {
+                showCoverageOnHover: false,
+                removeOutsideVisibleBounds: true,
+                disableClusteringAtZoom: 16
+            }
+
+            var parentGroup = L.markerClusterGroup(clusterOptions).addTo(mymap);
+
+            var clusterReal = L.featureGroup.subGroup(parentGroup).addTo(mymap); 
+            var highlight = L.featureGroup.subGroup(parentGroup).addTo(mymap);
+
+            //creating fake
+
+            // "MCI": ["Assault", "Break and Enter",  "Robbery", "Theft Over", "Auto Theft"],
+            var cluster_Assault = L.featureGroup.subGroup(parentGroup).addTo(mymap); 
+            var cluster_Break_and_Enter = L.featureGroup.subGroup(parentGroup).addTo(mymap); 
+            var cluster_Robbery = L.featureGroup.subGroup(parentGroup).addTo(mymap); 
+            var cluster_Auto_Theft = L.featureGroup.subGroup(parentGroup).addTo(mymap); 
+            var cluster_Theft_Over = L.featureGroup.subGroup(parentGroup).addTo(mymap); 
+
+            // "premisetype": [ "Apartment","Commercial","House", "Outside", "Other"],
+            var cluster_Apartment = L.featureGroup.subGroup(parentGroup).addTo(mymap); 
+            var cluster_Commercial = L.featureGroup.subGroup(parentGroup).addTo(mymap); 
+            var cluster_House = L.featureGroup.subGroup(parentGroup).addTo(mymap); 
+            var cluster_Outside = L.featureGroup.subGroup(parentGroup).addTo(mymap); 
+            var cluster_Other = L.featureGroup.subGroup(parentGroup).addTo(mymap); 
+
+
+            parentGroup.addTo(mymap);
+
+            var baseMaps = {'basemap': basemap};
+
+            var overlays = {
+                "Assault": cluster_Assault,
+                "Break and Enter" : cluster_Break_and_Enter,
+                "Robbery" : cluster_Robbery,
+                "Auto Theft" : cluster_Auto_Theft,
+                "Theft Over" : cluster_Theft_Over,
+            };
+            var overlays = [
+                     
+                     {
+						groupName : "Premisetype",
+						expanded  : true,
+						layers    : { 
+							"Apartment"     : cluster_Apartment,
+							"Commercial" 	 : cluster_Commercial,
+							"House"     : cluster_House,
+							"Outside" 	 : cluster_Outside,
+							"Other"     : cluster_Other
+						}	
+					 },	
+					 {
+						groupName : "Crime Type",
+						expanded  : true,
+						layers    : { 
+                            "<img src='Assault.svg' width='20' height='20'>&nbsp;Assault": cluster_Assault,
+                            "<img src='Break_and_Enter.svg' width='20' height='20'>&nbsp;Break and Enter" : cluster_Break_and_Enter,
+                            "<img src='Robbery.svg' width='20' height='20'>&nbsp;Robbery" : cluster_Robbery,
+                            "<img src='Auto_Theft.svg' width='20' height='20'>&nbsp;Auto Theft" : cluster_Auto_Theft,
+                            "<img src='Theft_Over.svg' width='20' height='20'>&nbsp;Theft Over" : cluster_Theft_Over,
+						}	
+					 }	 
+            ];
+
+            var StyledControllerOptions = {
+                container_width 	: "150px",
+                container_maxHeight : "320px", 
+                group_maxHeight     : "320px",
+                exclusive       	: false,
+                collapsed           : false
+            };
+
+            var controller = L.Control.styledLayerControl(baseMaps,overlays,StyledControllerOptions).addTo(mymap); 
+
+
+            // /*---Move controller outside---*/
+            // // Call the getContainer routine.
+            // var object = controller.getContainer();
+            // // Get the desired parent node.
+            // var newparent = document.getElementById('new-parent');
+            // // Finally append that node to the new parent.
+            // function setParent(el, newParent)
+            // {
+            //     newParent.appendChild(el);
+            // }
+            // setParent(object, newparent);
+
+            /*---Define markers---*/
+            function marker(feature, latlng) {
+                // return L.circleMarker(latlng, {
+                //     radius: 5,
+                //     fillColor: crimeTypeColor[feature.properties.MCI],
+                //     color: 'black',
+                //     weight: 2,
+                //     opacity: 0.5,
+                //     fillOpacity: 0.5
+                // })
+                return L.marker(latlng, {
+                    icon: L.icon({
+                        iconUrl: crimeTypeIcon[feature.properties.MCI],
+                        iconSize: [20, 20],
+                        // iconAnchor: [12, 28],
+                        popupAnchor: [0, -25]
+                    }),
+                    title: feature.properties.MCI,
+                    riseOnHover: true
+                })
+            }
+
+            function pop_up(feature, layer) {
+                var popupContent = 
+                '<h1>Offence: ' + String(feature.properties['offence']) 
+                + '</h1><br>Premisetype: ' + String(feature.properties['premisetype'])
+                + '<br>Division: ' + String(feature.properties['Division'])
+                + '<br>Neighbourhood: ' + String(feature.properties['Neighbourhood'])
+                + '<br>Date: ' + String(feature.properties['occurrencedate']);
+                
+                //reporteddate  reportedhour MCI Division Neighbourhood
+                layer.bindPopup(popupContent);
+            }
+
+            function updateMapPoints(geoJson){
+
+                console.log("updateMapPoints runs")
+                clusterReal.clearLayers();
+                var pointReal = new L.geoJson(geoJson,{
+                    onEachFeature: pop_up,
+                    pointToLayer: marker
+                })
+                clusterReal.addLayer(pointReal);
+            }
+
+            function zoomToFeature(clickedNeighbourhoodName) {
+                highlight.clearLayers();
+                neighbourhood.features.forEach(function(d){
+                    if (d.properties.Neighbourhood===clickedNeighbourhoodName){
+                        // var latlngs = d.geometry.coordinates;
+                        var block = d;
+                        var polygon = L.geoJSON(d);
+                        highlight.addLayer(polygon)
+                        mymap.fitBounds(polygon.getBounds(),{
+                            padding: [50, 50],
+                            maxZoom: 16,
+                            animate: true,
+                            pan: {
+                                duration: 1
+                            }
+                        });
+                        return;
+                    };
+                })  
+            };
+            
+            
+            MapInitializer.updateMapPoints = updateMapPoints;
+            MapInitializer.zoomToFeature = zoomToFeature;
+
+            mymap.on('overlayadd', layerAdd);
+            mymap.on('overlayremove', layerRemove);
+        };
+        
+        // View 2: Timeline
+        function TimelineInitializer(){
+            /*---Prepare Data---*/
+            // Using all data
+            timeline_data = nestByDate(MCI_2017);
+            daily_data = timeline_data.map(function(d){ return {"key": d.key, "frequency": d.values.length}});
+                
+            /*---Define Variables---*/
+            var margin={top:75,bottom:25,left:30,right:20},
+                w_height=0.4 * window.innerHeight - 62;
+                w_width=window.innerWidth;
+                width=w_width-margin.left-margin.right, //size of the entire inner chart (exceeds the size of the window)
+                height=w_height-margin.top-margin.bottom,
+                barwidth=1.5, //initial bar width
+                zoomScale=1;  //initial scale, will change along with zooming
+            
+            /*---Define Scales---*/
+            var xScale = d3.scaleTime()
+                .domain(initialOccurrenceDate)
+                .range([0,width]);
+            var yScale = d3.scaleLinear()
+                .domain([0, d3.max(daily_data,function(d){return d.frequency;})])
+                .range([height, 0]);
+            var new_xScale=xScale;
+            
+            /*---Create axes---*/
+            var xAxis = d3.axisBottom(xScale)
+                .ticks(8)
+                .tickFormat(d3.timeFormat("%b-%d"));
+            var yAxis = d3.axisLeft(yScale)
+                .ticks(5)
+                .tickFormat(d3.format("d"));
+
+            /*---Create layers---*/
+            var layer1 = d3.select("#timeline")
+                .append("svg")
+                .attr("width",w_width)
+                .attr("height",w_height);
+
+            var layer2 = layer1.append("g")
+                .attr("transform", "translate("+margin.left+","+margin.top+")")
+                .append("svg")
+                .attr("width", width)
+                .attr("height", height);
+            
+            /*---Assemble your axes into your figure---*/
+            var gX = layer1.append("g")
+                .attr("class", "x axis")
+                .attr("stroke", "white")
+                .attr("transform", "translate("+margin.left+","+(margin.top+height)+")")
+                .call(xAxis);
+            var gY = layer1.append("g")
+                .attr("class", "y axis")
+                .attr("stroke", "white")
+                .attr("transform", "translate("+margin.left+","+margin.top+")")
+                .call(yAxis);
+
+            /*---Draw the bars---*/
+            var bars = layer2.selectAll(".bar")
+                .data(daily_data)
+                .enter()
+                .append("rect")
+                .attr("class", "non_brushed")
+                .attr("x",function(d){
+                    return xScale(new Date(d.key))-0.55*barwidth;
+                })
+                .attr("y",function(d){
+                    return yScale(d.frequency)
+                })
+                .attr("width", barwidth)
+                .attr("height",function(d){
+                    return height - yScale(d.frequency)
+                });
+            
+            /*---Append Dates to Brushed Region---*/
+            var brushedText1 = layer2.append('g')
+                .attr("class", "brushedText")
+                .append("text")
+                .attr("text-anchor",'end')
+                .attr("fill", "white")
+                .attr("stroke", "white");
+            var brushedText2 = layer2.append('g')
+                .attr("class", "brushedText")
+                .append("text")
+                .attr("text-anchor",'end')
+                .attr("fill", "white")
+                .attr("stroke", "white");
+
+            /*---Behavior Object---*/
+            var brush = d3.brushX()
+                .extent([[0,0], [width, height]])
+                .on("brush", brushed)
+                .on('end',timelineBrush);  //when brushing finished, call outer user action function
+
+            var zoom = d3.zoom()
+                .scaleExtent([1, 38])
+                .translateExtent([[0, 0], [width, height]])
+                .extent([[0, 0], [width, height]])
+                .on("zoom", zoomed);
+
+             /*---Interactive Zone---*/
+             var interactive_zone = layer2.append("g")
+                .attr("class", "brush")
+                .call(brush)
+                .call(zoom);
+
+            /*---Initialize Brush---*/
+            interactive_zone
+                .call(brush.move, [new_xScale(global.occurrencedate[0]),new_xScale(global.occurrencedate[1])]);
+
+            
+                // // interactive_zone.call(zoom.event);
+
+                // // Record the coordinates (in data space) of the center (in screen space).
+                // var center0 = zoom.center(), translate0 = zoom.translate(), coordinates0 = coordinates(center0);
+                // zoom.scale(zoom.scale() * Math.pow(2, +this.getAttribute("data-zoom")));
+
+                // // Translate back to the center.
+                // var center1 = point(coordinates0);
+                // zoom.translate([translate0[0] + center0[0] - center1[0], translate0[1] + center0[1] - center1[1]]);
+
+                // interactive_zone.transition().duration(750).call(zoom.event);
+            
+
+            /*---Behavior Function---*/
+            function brushed() {
+                // if (d3.event.sourceEvent && d3.event.sourceEvent.type === "zoom") return;
+                if (d3.event.selection != null){
+                    // change to default
+                    bars.attr("class", "non_brushed")
+                    // update bar status
+                    var brush_coords = d3.brushSelection(this);
+                    bars.filter(function(d){
+                            var x = d3.select(this).attr("x");
+                            var x0 = brush_coords[0],
+                                x1 = brush_coords[1];
+                            return (x0-barwidth*zoomScale) <= x && x <= x1;
+                        })
+                        .attr("class", "brushed");
+                    // update global var
+                    global.occurrencedate = brush_coords.map(new_xScale.invert);
+                    var options = {month: 'short', day: 'numeric' };
+                    brushedText1.attr("transform","translate("+brush_coords[0]+",0) rotate(270)")
+                        .text(global.occurrencedate[0].toLocaleDateString("en-US",options));
+                    brushedText2.attr("transform","translate("+brush_coords[1]+",0) rotate(270)")
+                        .text(global.occurrencedate[1].toLocaleDateString("en-US",options));
+                    // clear brush
+                    interactive_zone.call(brush.move, null);
+                };
+            };
+
+            function zoomed() {
+                // if (d3.event.sourceEvent && d3.event.sourceEvent.type === "brush") return;
+                new_xScale = d3.event.transform.rescaleX(xScale);
+                zoomScale=d3.zoomTransform(interactive_zone.node()).k;
+                // update x axis
+                gX.call(xAxis.scale(new_xScale));
+                // update bars
+                bars.attr("x", function(d){return new_xScale(new Date(d.key))-0.55*barwidth*zoomScale})
+                    .attr("width",barwidth*zoomScale);
+                // move brush region along with zoom behavior, this is really slowing zoom down
+                // brushableGroup.call(brush.move, [new_xScale(timeRangeBrushed[0]),new_xScale(timeRangeBrushed[1])]);
+                brushedText1.attr("transform","translate("+new_xScale(global.occurrencedate[0])+",0) rotate(270)")
+                brushedText2.attr("transform","translate("+new_xScale(global.occurrencedate[1])+",0) rotate(270)")
+            };
+
+            /*---Update Function---*/
+            function updateTimeline(geoJSON){
+                // process data
+                var filtered_timeline_data = nestByDate(geoJSON);
+                var filtered_daily_data_dict = {};
+                filtered_timeline_data.forEach(function(d){ 
+                    filtered_daily_data_dict[d.key]=d.values.length;
+                });
+                maxFreq = getMaxFreq(filtered_daily_data_dict);
+                // update y Axis
+                yScale.domain([0, d3.max([0,maxFreq])]);
+                gY.transition()
+                    .duration(500)
+                    .call(yAxis.scale(yScale));
+                // update bars
+                bars.transition()
+                    .duration(500)
+                    .attr("y",function(d){
+                        return yScale(getFreq(d));
+                    })
+                    .attr("height",function(d){
+                        return height - yScale(getFreq(d));
+                    });
+
+                function getMaxFreq(data_dict){
+                    if (Object.keys(data_dict).length === 0){
+                        return 0;
+                    }
+                    var maxKey = Object.keys(data_dict).reduce(function(a, b){ return data_dict[a] > data_dict[b] ? a : b });
+                    var maxFreq = data_dict[maxKey];
+                    return maxFreq;                
+                };
+
+                function getFreq(d){
+                    if (d.key in filtered_daily_data_dict){
+                        return filtered_daily_data_dict[d.key];
+                    };
+                    return 0;
+                };
+            };
+
+            TimelineInitializer.updateTimeline = updateTimeline;
+        };
+
+        // View 3: Ranking
+        function RankingInitializer(){
+            /*---Prepare Data---*/
+            var nestedData = nestByNeighborhood(MCI_2017); //sorted list
+
+            /*---Define Variables---*/
+            var margin={top:10,bottom:10,left:10,right:10},
+                w_width=0.2 * window.innerWidth-20,
+                w_height=0.6 * window.innerHeight,
+                barheight=30,
+                width=w_width-margin.left-margin.right,
+                height=w_height-margin.top-margin.bottom;
+                
+            /*---Define Scale---*/
+            var xScale = d3.scaleLinear()
+                .domain([0, d3.max(nestedData,function(d){ return d.value; })])
+                .range([0,width]);
+
+            /*---Create layers---*/
+            var layer1 = d3.select("#ranking")
+                .append("svg")
+                .attr("class","layer1")
+                .attr("width",w_width)
+                .attr("height",barheight*nestedData.length)
+                .style("background-color","#1F2B33")
+                // .style("stroke","#C6C6C7");
+
+            var layer2 = layer1.append("g")
+                .attr("transform", "translate("+margin.left+","+margin.top+")")
+                .attr("x",0)
+                .attr("y",0)
+                .attr("width", width)
+                .attr("height", height);
+
+            /*---Draw Ranking---*/
+            var bars = layer2.selectAll(".bar")
+                .data(nestedData)
+                .enter()
+                .append("g")
+                .attr("transform", function (d,i){
+                    return "translate(0,"+ (i*barheight) +")";
+                });
+                
+            var rect = bars.append("rect")
+                .attr("class","bar")
+                .attr("x",0)
+                .attr("y",0)
+                .attr("width", function(d){
+                    return xScale(d.value);
+                })
+                .attr("height", barheight)
+                .style("fill","#f3924d")
+                .style("stroke", "white")
+                .style("stroke-width",1);
+            
+            var text = bars.append("text")
+                .attr("x", 7)
+                .attr("y", barheight / 2+5)
+                .style("text-anchor", "left")
+                .attr('fill',"white")
+                .attr("font-size", "15px")
+                .attr("font-family","Arial")
+                .text(function(d){ return d.value+"-"+d.key; })
+                .on("click",function(d){
+                    refocusOnNeighbourhood(d.key);
+                });
+
+            function getRanking(nestedData, inputkey){
+                for (var i=0; i<nestedData.length; i++){
+                    if (nestedData[i].key === inputkey){
+                        return i;
+                    };
+                };
+                return -1;
+            };
+
+            function updateRanking(nestedData){
+                console.log(nestedData)
+                xScale.domain([0, d3.max(nestedData,function(d){ return d.value; })])
+                layer1.attr("height",barheight*nestedData.length)
+                bars.transition().duration(500)
+                    .attr("opacity",function(d){
+                        var idx = getRanking(nestedData, d.key);
+                        if (idx < 0){
+                            return 0;
+                        }return 1;
+                    })
+                    .attr("transform",function(d){
+                        var idx = getRanking(nestedData, d.key);
+                        return "translate(0,"+ (idx*barheight) +")";
+                    });
+                rect.transition().duration(500)
+                    .attr("width",function(d){
+                        var idx = getRanking(nestedData, d.key)
+                        if (idx>=0){
+                            return xScale(nestedData[idx].value);
+                        }
+                        return xScale(0);
+                    });
+                text.text(function(d){
+                    var idx = getRanking(nestedData, d.key);
+                    if (idx >= 0) {
+                        return nestedData[idx].value+"-"+d.key; 
+                    }
+                    return "0-"+d.key; 
+                });
+            };
+            RankingInitializer.updateRanking=updateRanking;
+        };
+
+
+// Initialize Views
+        MapInitializer();
+        RankingInitializer();
+        TimelineInitializer();
+
+        function refocusOnNeighbourhood(clickedNeighbourhoodName){
+            MapInitializer.zoomToFeature(clickedNeighbourhoodName);
+        }
+
+
+// User Actions
+        // Action 1.1: Map Add Layer
+        function layerAdd(e){
+            if (MCIList.includes(e.name.split(";")[1])){
+                global.MCI.push(e.name.split(";")[1]);
+                console.log("current status", global.MCI);
+            }
+            else if (premisetypeList.includes(e.name)){
+                global.premisetype.push(e.name);
+                console.log("current status", global.premisetype);
+            }
+            var filterCategoryData = filterCategory(MCI_2017);
+            var filterTimeData = filterTime(filterCategoryData,global.occurrencedate);
+            var nestedData = nestByNeighborhood(filterTimeData);
+            MapInitializer.updateMapPoints(filterTimeData);
+            TimelineInitializer.updateTimeline(filterCategoryData)
+            RankingInitializer.updateRanking(nestedData);
+        };
+        
+        // Action 1.2: Map Remove Layer
+        function layerRemove(e){
+            if (MCIList.includes(e.name.split(";")[1])){
+                global.MCI = global.MCI.filter(data => data != e.name.split(";")[1]);
+                console.log(global.MCI);
+            }
+            else if (premisetypeList.includes(e.name)){
+                global.premisetype = global.premisetype.filter(data => data != e.name);
+                console.log(global.premisetype);
+            }
+            var filterCategoryData = filterCategory(MCI_2017);
+            var filterTimeData = filterTime(filterCategoryData,global.occurrencedate);
+            var nestedData = nestByNeighborhood(filterTimeData);
+            MapInitializer.updateMapPoints(filterTimeData);
+            TimelineInitializer.updateTimeline(filterCategoryData)
+            RankingInitializer.updateRanking(nestedData);
+        };
+
+        // Action 2: Timeline Brush
+        function timelineBrush(){
+            var filterCategoryData = filterCategory(MCI_2017);
+            var filterTimeData = filterTime(filterCategoryData,global.occurrencedate);
+            var nestedData = nestByNeighborhood(filterTimeData);
+            MapInitializer.updateMapPoints(filterTimeData);
+            RankingInitializer.updateRanking(nestedData);
+        };
+
+
+    
+    </script>
+</body>
+</html>
